@@ -1,8 +1,8 @@
-import xs, { Stream } from 'xstream';
-import { VNode, DOMSource } from '@cycle/dom';
-import { StateSource } from 'cycle-onionify';
+import xs, { Stream } from "xstream";
+import { VNode, DOMSource } from "@cycle/dom";
+import { StateSource } from "cycle-onionify";
 
-import { Sources, Sinks } from './interfaces';
+import { Sources, Sinks } from "./interfaces";
 
 export type AppSources = Sources & { onion: StateSource<AppState> };
 export type AppSinks = Sinks & { onion: Stream<Reducer> };
@@ -24,24 +24,22 @@ export function App(sources: AppSources): AppSinks {
 function intent(DOM: DOMSource): Stream<Reducer> {
     const init$: Stream<Reducer> = xs.of<Reducer>(() => ({ count: 0 }));
 
-    const add$: Stream<Reducer> = DOM.select('.add')
-        .events('click')
+    const add$: Stream<Reducer> = DOM.select(".add")
+        .events("click")
         .mapTo<Reducer>(state => ({ ...state, count: state.count + 1 }));
 
-    const subtract$: Stream<Reducer> = DOM.select('.subtract')
-        .events('click')
+    const subtract$: Stream<Reducer> = DOM.select(".subtract")
+        .events("click")
         .mapTo<Reducer>(state => ({ ...state, count: state.count - 1 }));
 
     return xs.merge(init$, add$, subtract$);
 }
 
 function view(state$: Stream<AppState>): Stream<VNode> {
-    return state$.map(s => s.count).map(count =>
+    return state$.map(s => s.count).map(count => (
         <div>
             <h2>My Awesome Cycle.js app</h2>
-            <span>
-                {'Counter: ' + count}
-            </span>
+            <span>{"Counter: " + count}</span>
             <button type="button" className="add">
                 Increase
             </button>
@@ -49,5 +47,5 @@ function view(state$: Stream<AppState>): Stream<VNode> {
                 Decrease
             </button>
         </div>
-    );
+    ));
 }
