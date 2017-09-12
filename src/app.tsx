@@ -24,6 +24,27 @@ function intent(DOM: DOMSource): Action {
 }
 
 function model(action: Action): Stream<GameState> {
+    function calculateWinner(board: SquareState[]): string | undefined {
+        const lines = [
+            [0, 1, 2],
+            [3, 4, 5],
+            [6, 7, 8],
+            [0, 3, 6],
+            [1, 4, 7],
+            [2, 5, 8],
+            [0, 4, 8],
+            [2, 4, 6]
+        ];
+
+        for (let i = 0; i < lines.length; i++) {
+            const [a, b, c] = lines[i];
+            if (board[a] && board[a] === board[b] && board[a] === board[c]) {
+                return board[a];
+            }
+        }
+        return undefined;
+    }
+
     function step(state: GameState, squareNum: number): GameState {
         const newBoard = state.board.slice();
         if (!state.winner && !newBoard[squareNum]) {
@@ -46,17 +67,16 @@ function model(action: Action): Stream<GameState> {
     return action.clickSquare$.fold(step, initial);
 }
 
-function makeSquareRenderer(board: Board): (n: number) => JSX.Element {
-    return (n: number) => (
-        <button className="square" name={n}>
-            {board[n]}
-        </button>
-    );
-}
-
 function view(state$: Stream<GameState>): Stream<VNode> {
     return state$.map(state => {
-        const renderSquare = makeSquareRenderer(state.board);
+        function renderSquare(n: number): JSX.Element {
+            return (
+                <button className="square" name={n}>
+                    {state.board[n]}
+                </button>
+            );
+        }
+
         let winner;
         if (state.winner) {
             winner = <span>Winner: {state.winner}</span>;
@@ -89,25 +109,4 @@ function view(state$: Stream<GameState>): Stream<VNode> {
             </div>
         );
     });
-}
-
-function calculateWinner(board: SquareState[]): string | undefined {
-    const lines = [
-        [0, 1, 2],
-        [3, 4, 5],
-        [6, 7, 8],
-        [0, 3, 6],
-        [1, 4, 7],
-        [2, 5, 8],
-        [0, 4, 8],
-        [2, 4, 6]
-    ];
-
-    for (let i = 0; i < lines.length; i++) {
-        const [a, b, c] = lines[i];
-        if (board[a] && board[a] === board[b] && board[a] === board[c]) {
-            return board[a];
-        }
-    }
-    return undefined;
 }
