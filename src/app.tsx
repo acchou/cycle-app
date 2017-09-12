@@ -41,11 +41,13 @@ function intent(DOM: DOMSource): Action {
 }
 
 function model(action: Action): xs<Reducer> {
-    const clickSquare$ = action.clickSquare$.map(squareNum => (state: AppState) => {
-        const newBoard = state.board.slice();
-        newBoard[squareNum] = state.turn;
-        return { ...state, turn: state.turn === "X" ? "O" : "X", board: newBoard } as AppState;
-    });
+    const clickSquare$ = action.clickSquare$
+        .debug("clickSquare")
+        .map(squareNum => (state: AppState) => {
+            const newBoard = state.board.slice();
+            newBoard[squareNum] = state.turn;
+            return { ...state, turn: state.turn === "X" ? "O" : "X", board: newBoard } as AppState;
+        });
 
     const initialState$ = xs.of((prev: AppState) => ({
         turn: "X" as Turn,
