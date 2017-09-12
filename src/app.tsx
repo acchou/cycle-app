@@ -86,8 +86,7 @@ function view(state$: Stream<AppState>): Stream<VNode> {
         return (
             <div>
                 <h2>tictactoe built with cycle.js</h2>
-                {winner}
-                <div>
+                <div className="game-board">
                     <div className="board-row">
                         {renderSquare(0)}
                         {renderSquare(1)}
@@ -103,6 +102,9 @@ function view(state$: Stream<AppState>): Stream<VNode> {
                         {renderSquare(7)}
                         {renderSquare(8)}
                     </div>
+                </div>
+                <div className="game-info">
+                    <div>{winner}</div>
                 </div>
             </div>
         );
