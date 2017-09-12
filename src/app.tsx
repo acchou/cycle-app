@@ -8,14 +8,14 @@ export type AppSources = Sources & { onion: StateSource<AppState> };
 export type AppSinks = Sinks & { onion: Stream<Reducer> };
 export type Reducer = (prev: AppState) => AppState;
 
-type SquareState = "X" | "O" | undefined;
-type Turn = "X" | "O";
-
+type Player = "X" | "O";
+type SquareState = Player | undefined;
 type Board = SquareState[];
 
 export type AppState = {
     board: Board;
-    turn: Turn;
+    turn: Player;
+    winner: Player | undefined;
 };
 
 export function App(sources: AppSources): AppSinks {
@@ -34,43 +34,59 @@ export type Action = { clickSquare$: xs<number> };
 function intent(DOM: DOMSource): Action {
     const clickSquare$ = DOM.select(".square")
         .events("click")
-        .map(ev => (ev.target as HTMLElement).dataset.squareNum)
+        .map(ev => (ev.target as HTMLElement).getAttribute("name"))
         .map(n => Number(n));
 
     return { clickSquare$: clickSquare$ };
 }
 
-function model(action: Action): xs<Reducer> {
+function model(action: Action): Stream<Reducer> {
     const clickSquare$ = action.clickSquare$
         .debug("clickSquare")
         .map(squareNum => (state: AppState) => {
             const newBoard = state.board.slice();
-            newBoard[squareNum] = state.turn;
-            return { ...state, turn: state.turn === "X" ? "O" : "X", board: newBoard } as AppState;
+            if (!state.winner && !newBoard[squareNum]) {
+                newBoard[squareNum] = state.turn;
+            }
+            return {
+                ...state,
+                turn: state.turn === "X" ? "O" : "X",
+                board: newBoard,
+                winner: calculateWinner(newBoard)
+            } as AppState;
         });
 
-    const initialState$ = xs.of((prev: AppState) => ({
-        turn: "X" as Turn,
-        board: new Array(9).fill(undefined)
-    }));
+    const initialState$ = xs.of(
+        (prev: AppState) =>
+            ({
+                turn: "X",
+                board: new Array(9).fill(undefined),
+                winner: undefined
+            } as AppState)
+    );
 
     return xs.merge(initialState$, clickSquare$);
 }
 
 function makeSquareRenderer(board: Board): (n: number) => JSX.Element {
     return (n: number) => (
-        <button className="square" data-squareNum={n}>
+        <button className="square" name={n}>
             {board[n]}
         </button>
     );
 }
 
 function view(state$: Stream<AppState>): Stream<VNode> {
-    return state$.map(s => s.board).map(board => {
-        const renderSquare = makeSquareRenderer(board);
+    return state$.map(state => {
+        const renderSquare = makeSquareRenderer(state.board);
+        let winner;
+        if (state.winner) {
+            winner = <span>Winner: {state.winner}</span>;
+        }
         return (
             <div>
                 <h2>tictactoe built with cycle.js</h2>
+                {winner}
                 <div>
                     <div className="board-row">
                         {renderSquare(0)}
