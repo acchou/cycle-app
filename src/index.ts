@@ -5,12 +5,11 @@ import { makeDOMDriver } from "@cycle/dom";
 import { makeHTTPDriver } from "@cycle/http";
 import { timeDriver } from "@cycle/time";
 import isolate from "@cycle/isolate";
-import onionify from "cycle-onionify";
 
 import { Component, Sources, RootSinks } from "./interfaces";
 import { App } from "./app";
 
-const main: Component = onionify(App);
+const main: Component = App;
 
 let drivers: any, driverFn: any;
 /// #if PRODUCTION
@@ -40,7 +39,7 @@ if (module.hot) {
     module.hot.accept("./app", () => {
         const newApp = require("./app").App;
 
-        rerun(onionify(newApp));
+        rerun(newApp);
     });
 }
 /// #endif

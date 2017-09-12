@@ -3,15 +3,27 @@ import { VNode, DOMSource } from "@cycle/dom";
 import { HTTPSource, RequestOptions } from "@cycle/http";
 import { TimeSource } from "@cycle/time";
 
+export type Player = "X" | "O";
+export type SquareState = Player | undefined;
+export type Board = SquareState[];
+
+export type GameState = {
+    board: Board;
+    turn: Player;
+    winner: Player | undefined;
+};
+
 export type Sources = {
     DOM: DOMSource;
     HTTP: HTTPSource;
     Time: TimeSource;
+    State: GameState;
 };
 
 export type RootSinks = {
     DOM: Stream<VNode>;
     HTTP: Stream<RequestOptions>;
+    State: GameState;
 };
 
 export type Sinks = Partial<RootSinks>;
