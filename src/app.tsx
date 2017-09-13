@@ -1,6 +1,6 @@
 import xs, { Stream } from "xstream";
 import { VNode, DOMSource } from "@cycle/dom";
-import { Sources, Sinks, GameState, Player, SquareState, Board } from "./interfaces";
+import { Sources, Sinks, GameState, Player, SquareState, Board, Action } from "./interfaces";
 
 export function App(sources: Sources): Sinks {
     const actions: Action = intent(sources.DOM);
@@ -12,15 +12,21 @@ export function App(sources: Sources): Sinks {
     };
 }
 
-export type Action = { clickSquare$: xs<number> };
-
 function intent(DOM: DOMSource): Action {
     const clickSquare$ = DOM.select(".square")
         .events("click")
         .map(ev => (ev.target as HTMLElement).getAttribute("name"))
         .map(n => Number(n));
 
-    return { clickSquare$: clickSquare$ };
+    const clickMove$ = DOM.select(".move")
+        .events("click")
+        .map(ev => (ev.target as HTMLElement).dataset.move)
+        .map(n => Number(n));
+
+    return {
+        clickSquare$: clickSquare$,
+        clickMove$: clickMove$
+    };
 }
 
 function model(action: Action): Stream<GameState> {
@@ -45,34 +51,48 @@ function model(action: Action): Stream<GameState> {
         return undefined;
     }
 
-    function step(state: GameState, squareNum: number): GameState {
-        const newBoard = state.board.slice();
+    function clickSquareStep(state: GameState, squareNum: number): GameState {
+        const newBoard = state.history[state.history.length - 1].slice();
+        const newHistory = state.history.slice();
         if (!state.winner && !newBoard[squareNum]) {
             newBoard[squareNum] = state.turn;
+            newHistory.push(newBoard);
         }
+
         return {
             ...state,
             turn: state.turn === "X" ? "O" : "X",
-            board: newBoard,
+            history: newHistory,
             winner: calculateWinner(newBoard)
+        } as GameState;
+    }
+
+    function clickMoveStep(state: GameState, move: number) {
+        const newHistory = state.history.slice(move);
+        return {
+            ...state,
+            turn: move % 2 === 0 ? "X" : "O",
+            history: newHistory,
+            winner: calculateWinner(newHistory[newHistory.length - 1])
         } as GameState;
     }
 
     const initial = {
         turn: "X",
-        board: new Array(9).fill(undefined),
+        history: [new Array(9).fill(undefined)],
         winner: undefined
     } as GameState;
 
-    return action.clickSquare$.fold(step, initial);
+    return action.clickSquare$.fold(clickSquareStep, initial);
 }
 
 function view(state$: Stream<GameState>): Stream<VNode> {
     return state$.map(state => {
         function renderSquare(n: number): JSX.Element {
+            const board = state.history[state.history.length - 1];
             return (
                 <button className="square" name={n}>
-                    {state.board[n]}
+                    {board[n]}
                 </button>
             );
         }
@@ -104,6 +124,15 @@ function view(state$: Stream<GameState>): Stream<VNode> {
                     </div>
                     <div className="game-info">
                         <div>{winner}</div>
+                        <ol>
+                            {state.history.map((_, move) => (
+                                <li>
+                                    <a className="move" href="#" data-move={move}>
+                                        {move ? "Move #" + move : "Game Start"}
+                                    </a>
+                                </li>
+                            ))}
+                        </ol>
                     </div>
                 </div>
             </div>
