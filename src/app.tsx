@@ -29,6 +29,8 @@ function intent(DOM: DOMSource): Action {
     };
 }
 
+type Reducer = (state: GameState) => GameState;
+
 function model(action: Action): Stream<GameState> {
     function calculateWinner(board: SquareState[]): string | undefined {
         const lines = [
@@ -51,39 +53,47 @@ function model(action: Action): Stream<GameState> {
         return undefined;
     }
 
-    function clickSquareStep(state: GameState, squareNum: number): GameState {
-        const newBoard = state.history[state.history.length - 1].slice();
-        const newHistory = state.history.slice();
-        if (!state.winner && !newBoard[squareNum]) {
-            newBoard[squareNum] = state.turn;
-            newHistory.push(newBoard);
-        }
+    const clickSquareSteps = action.clickSquare$.map((squareNum: number) => {
+        return function clickSquareStep(state: GameState): GameState {
+            const newBoard = state.history[state.history.length - 1].slice();
+            const newHistory = state.history.slice();
+            if (!state.winner && !newBoard[squareNum]) {
+                newBoard[squareNum] = state.turn;
+                newHistory.push(newBoard);
+            }
+            return {
+                ...state,
+                turn: state.turn === "X" ? "O" : "X",
+                history: newHistory,
+                winner: calculateWinner(newBoard)
+            } as GameState;
+        };
+    });
 
-        return {
-            ...state,
-            turn: state.turn === "X" ? "O" : "X",
-            history: newHistory,
-            winner: calculateWinner(newBoard)
-        } as GameState;
-    }
+    const clickMoveSteps = action.clickMove$.map((move: number) => {
+        return function clickMoveStep(state: GameState): GameState {
+            if (isNaN(move)) {
+                move = 0;
+            }
+            const newHistory = state.history.slice(0, move + 1);
+            return {
+                ...state,
+                turn: move % 2 === 0 ? "X" : "O",
+                history: newHistory,
+                winner: calculateWinner(newHistory[newHistory.length - 1])
+            } as GameState;
+        };
+    });
 
-    function clickMoveStep(state: GameState, move: number) {
-        const newHistory = state.history.slice(move);
-        return {
-            ...state,
-            turn: move % 2 === 0 ? "X" : "O",
-            history: newHistory,
-            winner: calculateWinner(newHistory[newHistory.length - 1])
-        } as GameState;
-    }
-
-    const initial = {
+    const initial: GameState = {
         turn: "X",
         history: [new Array(9).fill(undefined)],
         winner: undefined
-    } as GameState;
+    };
 
-    return action.clickSquare$.fold(clickSquareStep, initial);
+    return xs
+        .merge(clickSquareSteps, clickMoveSteps)
+        .fold((state, reducer) => reducer(state), initial);
 }
 
 function view(state$: Stream<GameState>): Stream<VNode> {
@@ -96,6 +106,14 @@ function view(state$: Stream<GameState>): Stream<VNode> {
                 </button>
             );
         }
+
+        const history = state.history.map((_, move) => (
+            <li>
+                <a className="move" href="#" data-move={move}>
+                    {move ? "Move #" + move : "Game Start"}
+                </a>
+            </li>
+        ));
 
         let winner;
         if (state.winner) {
@@ -124,15 +142,7 @@ function view(state$: Stream<GameState>): Stream<VNode> {
                     </div>
                     <div className="game-info">
                         <div>{winner}</div>
-                        <ol>
-                            {state.history.map((_, move) => (
-                                <li>
-                                    <a className="move" href="#" data-move={move}>
-                                        {move ? "Move #" + move : "Game Start"}
-                                    </a>
-                                </li>
-                            ))}
-                        </ol>
+                        <ol>{history}</ol>
                     </div>
                 </div>
             </div>
