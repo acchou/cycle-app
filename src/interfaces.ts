@@ -13,6 +13,8 @@ export type GameState = {
     winner: Player | undefined;
 };
 
+export type Reducer = (state: GameState) => GameState;
+
 export type Sources = {
     DOM: DOMSource;
     HTTP: HTTPSource;

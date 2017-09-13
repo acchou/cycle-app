@@ -1,6 +1,15 @@
 import xs, { Stream } from "xstream";
 import { VNode, DOMSource } from "@cycle/dom";
-import { Sources, Sinks, GameState, Player, SquareState, Board, Action } from "./interfaces";
+import {
+    Sources,
+    Sinks,
+    GameState,
+    Player,
+    SquareState,
+    Board,
+    Action,
+    Reducer
+} from "./interfaces";
 
 export function App(sources: Sources): Sinks {
     const actions: Action = intent(sources.DOM);
@@ -28,8 +37,6 @@ function intent(DOM: DOMSource): Action {
         clickMove$: clickMove$
     };
 }
-
-type Reducer = (state: GameState) => GameState;
 
 function model(action: Action): Stream<GameState> {
     function calculateWinner(board: SquareState[]): string | undefined {
@@ -107,6 +114,24 @@ function view(state$: Stream<GameState>): Stream<VNode> {
             );
         }
 
+        function renderRow(rowNum: number): JSX.Element {
+            return (
+                <div className="board-row">
+                    {renderSquare(rowNum * 3)}
+                    {renderSquare(rowNum * 3 + 1)}
+                    {renderSquare(rowNum * 3 + 2)}
+                </div>
+            );
+        }
+
+        const board = (
+            <div className="game-board">
+                {renderRow(0)}
+                {renderRow(1)}
+                {renderRow(2)}
+            </div>
+        );
+
         const history = state.history.map((_, move) => (
             <li>
                 <a className="move" href="#" data-move={move}>
@@ -123,23 +148,7 @@ function view(state$: Stream<GameState>): Stream<VNode> {
             <div>
                 <h2>tictactoe built with cycle.js</h2>
                 <div className="game">
-                    <div className="game-board">
-                        <div className="board-row">
-                            {renderSquare(0)}
-                            {renderSquare(1)}
-                            {renderSquare(2)}
-                        </div>
-                        <div className="board-row">
-                            {renderSquare(3)}
-                            {renderSquare(4)}
-                            {renderSquare(5)}
-                        </div>
-                        <div className="board-row">
-                            {renderSquare(6)}
-                            {renderSquare(7)}
-                            {renderSquare(8)}
-                        </div>
-                    </div>
+                    {board}
                     <div className="game-info">
                         <div>{winner}</div>
                         <ol>{history}</ol>
